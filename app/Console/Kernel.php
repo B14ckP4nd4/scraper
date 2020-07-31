@@ -14,6 +14,7 @@ class Kernel extends ConsoleKernel
      */
     protected $commands = [
         \App\Console\Commands\scraper::class,
+        \App\Console\Commands\scraperInfomation::class,
     ];
 
     /**
