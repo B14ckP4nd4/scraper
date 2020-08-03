@@ -262,38 +262,5 @@ class scraper extends Command
         return false;
     }
 
-    // Go to first directory of Index of
-    private function getParentDir($url)
-    {
-
-        $url = rtrim($url, '\/');
-        $preg = preg_match("/(?<main>(https?:\/\/)?(www\.)?(?<domain>[^\/]+))(\/?(?<sub>.*))?/i", $url, $match);
-
-        if (!$match['main'])
-            return false;
-
-        // Return main Url if 'index of' is on Home page
-        if (!$match['sub'])
-            return $url;
-
-        $subFolders = trim($match['sub'], '\/');
-        $subFolders = explode('/', $subFolders);
-
-        // search for main 'Index of' path
-
-        $target = $match['main'];
-
-        for ($i = 0; $i < count($subFolders); $i++) {
-            $target .= '/' . $subFolders[$i];
-            $content = $this->getTargetContent($target);
-
-            // check is this Index of Page or not
-            if ($this->isIndexOf($content))
-                return $target;
-        }
-
-        // Return the URL if couldn't find any Parent page
-        return $url;
-    }
 
 }
