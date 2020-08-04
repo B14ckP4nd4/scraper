@@ -6,6 +6,7 @@ use App\downloadList;
 use App\targets;
 use Illuminate\Console\Command;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
 
 class scraperScanner extends Command
 {
@@ -99,11 +100,21 @@ class scraperScanner extends Command
         foreach($this->targets as $target)
         {
             $this->info("[info] Start deep scan ".$target->url."\n");
+
+            // LOG
+            Log::info("Start Working On {$target->url}");
+
+            // reset Download list
+            $this->downloadList = [];
+
             // check if DeepScan is True
             if($this->deepScan)
             {
                 // Search For Parent Directory
                 $parent = $this->getParentDir($target->url);
+
+                // LOG
+                Log::info("Find this parent for deep scan : {$parent}");
 
                 $this->info("[info] Parrent directori found $parent");
 
@@ -117,7 +128,8 @@ class scraperScanner extends Command
 
 
 
-
+                // LOG
+                Log::info("Start Tracer : {$parent}");
                 // Trace Directories
                 $dirs = $this->traceDirectories($parent);
 
@@ -129,14 +141,13 @@ class scraperScanner extends Command
                 foreach($unique as $downloadItem)
                 {
                     $download = downloadList::updateOrCreate(
-                        ['link' => $downloadItem]
+                        ['url' => $downloadItem]
                     );
                 }
-
-                dd();
+                $target->scrapped = true;
+                $target->save();
             }
         }
-
     }
 
     // Trace All Directories in URL
@@ -146,12 +157,22 @@ class scraperScanner extends Command
         $linkContent = $this->Request($target);
 
         if(!$this->isIndexOf($linkContent))
+        {
+            // LOG
+            Log::warning("it's not an IndexOf page : {$target}");
             return false;
+        }
+
 
         $links = $this->getLinks($linkContent);
 
         if(!$links)
+        {
+            // LOG
+            Log::warning("couldn't find any link here : {$target}");
             return false;
+        }
+
 
         //$this->tracedURLs[] = $target;
 
@@ -176,7 +197,6 @@ class scraperScanner extends Command
             // check subdirectories if is Dir
             if($this->isDir($url) && !in_array($url, $this->tracedURLs))
             {
-                dump($url);
                 $this->directories[] = $url;
 
                 // Get Content of SubDirectory
