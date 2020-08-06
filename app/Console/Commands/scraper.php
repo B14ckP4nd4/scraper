@@ -44,10 +44,11 @@ class scraper extends Command
     {
         parent::__construct();
 
-        $this->PROXY_HOST = '127.0.0.1';
-        $this->PROXY_PORT = 8086;
-        $this->PROXY_USER = 'test';
-        $this->PROXY_PASS = 'cwncwn';
+        $this->PROXY_HOST = env('PROXY_HOST', '127.0.0.1');
+        $this->PROXY_PORT = env('PROXY_PORT', 8086);
+        $this->PROXY_USER = env('PROXY_USER', null);
+        $this->PROXY_PASS = env('PROXY_PASS', null);
+        $this->PROXY_TYPE = env('PROXY_TYPE', 'HTTP');
 
         $this->TargetsFile = null;
         $this->targetURL = '';

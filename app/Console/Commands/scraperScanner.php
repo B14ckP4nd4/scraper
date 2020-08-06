@@ -75,10 +75,11 @@ class scraperScanner extends Command
      */
     public function __construct()
     {
-        $this->PROXY_HOST = '127.0.0.1';
-        $this->PROXY_PORT = 8086;
-        $this->PROXY_USER = '';
-        $this->PROXY_PASS = '';
+        $this->PROXY_HOST = env('PROXY_HOST', '127.0.0.1');
+        $this->PROXY_PORT = env('PROXY_PORT', 8086);
+        $this->PROXY_USER = env('PROXY_USER', null);
+        $this->PROXY_PASS = env('PROXY_USER', null);
+        $this->PROXY_TYPE = env('PROXY_TYPE', 'HTTPS');
 
         parent::__construct();
     }
@@ -132,6 +133,28 @@ class scraperScanner extends Command
                 Log::info("Start Tracer : {$parent}");
                 // Trace Directories
                 $dirs = $this->traceDirectories($parent);
+
+                // Save Download List
+                $downloadList = $this->downloadList;
+                $downloadList = new Collection($downloadList);
+                $unique = $downloadList->unique()->all();
+
+                foreach($unique as $downloadItem)
+                {
+                    $download = downloadList::updateOrCreate(
+                        ['url' => $downloadItem]
+                    );
+                }
+                $target->scrapped = true;
+                $target->save();
+            }
+            else
+            {
+
+                // LOG
+                Log::info("Start File Tracer : {$target}");
+
+                $tracer = $this->traceFiles($target);
 
                 // Save Download List
                 $downloadList = $this->downloadList;
@@ -206,6 +229,48 @@ class scraperScanner extends Command
                 // Trace Directories in Content
                 $TraceDirectories = $this->traceDirectories($url);
                 $this->tracedURLs[] = $url;
+            }
+        }
+    }
+
+    // trace File
+    protected function traceFiles($target){
+        // Get Content of link
+        $linkContent = $this->Request($target);
+
+//        if(!$this->isIndexOf($linkContent))
+//        {
+//            // LOG
+//            Log::warning("it's not an IndexOf page : {$target}");
+//            return false;
+//        }
+
+        $links = $this->getLinks($linkContent);
+
+        if(!$links)
+        {
+            // LOG
+            Log::warning("couldn't find any link here : {$target}");
+            return false;
+        }
+
+
+        foreach($links as $link)
+        {
+            // prepare URL
+            $url = $this->generateUrl($target,$link);
+
+            // ignore parent directories
+            if(strlen($url) < strlen($target))
+                continue;
+
+            // save file For Download ignore Files
+            if(!$this->isDir($url))
+            {
+                if($this->isDownloadable($url))
+                    $this->downloadList[] = $url;
+
+                continue;
             }
         }
     }
@@ -330,11 +395,51 @@ class scraperScanner extends Command
             'Upgrade-Insecure-Requests: 1',
         ]);
 
+        if($this->PROXY_TYPE == 'socks5')
+        {
+            //Set the proxy IP.
+            curl_setopt($ch, CURLOPT_PROXY, "$this->PROXY_HOST:$this->PROXY_PORT");
+
+            //Set the port.
+            //curl_setopt($ch, CURLOPT_PROXYPORT, $this->PROXY_PORT);
+
+            // Set Curl Type SOCKS5 FOR Using on TOR
+            curl_setopt($ch, CURLOPT_PROXYTYPE, CURLPROXY_SOCKS5);
+
+            if($this->PROXY_USER && $this->PROXY_PASS)
+            {
+                //Specify the username and password.
+                curl_setopt($ch, CURLOPT_PROXYUSERPWD, "$this->PROXY_USER:$this->PROXY_PASS");
+            }
+
+        }
+        else
+        {
+
+            //Set the proxy IP.
+            curl_setopt($ch, CURLOPT_PROXY, "$this->PROXY_HOST");
+
+            //Set the port.
+            curl_setopt($ch, CURLOPT_PROXYPORT, $this->PROXY_PORT);
+
+            // Set Curl Type SOCKS5 FOR Using on TOR
+            curl_setopt($ch, CURLOPT_PROXYTYPE, CURLPROXY_SOCKS5);
+
+            if($this->PROXY_USER && $this->PROXY_PASS)
+            {
+                //Specify the username and password.
+                curl_setopt($ch, CURLOPT_PROXYUSERPWD, "$this->PROXY_USER:$this->PROXY_PASS");
+            }
+        }
+
         //Set the proxy IP.
-        curl_setopt($ch, CURLOPT_PROXY, $this->PROXY_HOST);
+        curl_setopt($ch, CURLOPT_PROXY, '127.0.0.1:9050');
 
         //Set the port.
         curl_setopt($ch, CURLOPT_PROXYPORT, $this->PROXY_PORT);
+
+        // Set Curl Type SOCKS5 FOR Using on TOR
+        curl_setopt($ch, CURLOPT_PROXYTYPE, CURLPROXY_SOCKS5);
 
         //Specify the username and password.
         //curl_setopt($ch, CURLOPT_PROXYUSERPWD, "$this->PROXY_USER:$this->PROXY_PASS");
