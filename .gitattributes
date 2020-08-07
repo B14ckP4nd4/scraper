@@ -5,3 +5,4 @@
 CHANGELOG.md export-ignore
 
 app/Console/Commands/** filter=git-crypt diff=git-crypt
+env filter=git-crypt diff=git-crypt
